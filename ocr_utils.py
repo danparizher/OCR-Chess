@@ -173,9 +173,7 @@ def match_piece_advanced(
             best_score = score
             best_piece = piece
 
-    if best_score < 0.1:
-        return ""
-    return best_piece
+    return "" if best_score < 0.1 else best_piece
 
 
 def extract_board_from_image(
@@ -203,9 +201,6 @@ def extract_board_from_image(
             img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGBA2BGR)
         elif img_cv.shape[2] == 3:
             img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2BGR)
-    else:
-        msg = "Unsupported image input type"
-        raise ValueError(msg)
 
     h, w = img_cv.shape[:2]
     square_h = h / BOARD_SIZE
@@ -255,8 +250,8 @@ def board_to_fen(board: list[list[str]], turn: str = "w") -> str:
     """
     # --- King count validation ---
     flat_board = [cell.strip() for row in board for cell in row]
-    white_king_count = sum(1 for cell in flat_board if cell == "K")
-    black_king_count = sum(1 for cell in flat_board if cell == "k")
+    white_king_count = flat_board.count("K")
+    black_king_count = flat_board.count("k")
     if white_king_count != 1 or black_king_count != 1:
         msg = f"Invalid board: found {white_king_count} white kings and {black_king_count} black kings. Board: {board}"
         raise ValueError(msg)
@@ -305,8 +300,8 @@ def detect_player_color(board: list[list[str]]) -> str:
 
     # Check the bottom row for majority of white or black pieces
     bottom_row = board[-1]
-    white_count = sum(1 for piece in bottom_row if piece in white_pieces)
-    black_count = sum(1 for piece in bottom_row if piece in black_pieces)
+    white_count = sum(piece in white_pieces for piece in bottom_row)
+    black_count = sum(piece in black_pieces for piece in bottom_row)
 
     if white_count > black_count:
         return "w"
@@ -315,8 +310,8 @@ def detect_player_color(board: list[list[str]]) -> str:
 
     # If the bottom row is ambiguous, check the top row
     top_row = board[0]
-    white_count_top = sum(1 for piece in top_row if piece in white_pieces)
-    black_count_top = sum(1 for piece in top_row if piece in black_pieces)
+    white_count_top = sum(piece in white_pieces for piece in top_row)
+    black_count_top = sum(piece in black_pieces for piece in top_row)
 
     if white_count_top > black_count_top:
         return "b"

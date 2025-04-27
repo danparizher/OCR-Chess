@@ -15,8 +15,7 @@ class ChessOverlay(QtWidgets.QWidget):
     ) -> None:
         super().__init__(parent)
         print(f"[Overlay Debug] Region: {region}")
-        screen = QtWidgets.QApplication.primaryScreen()
-        if screen:
+        if screen := QtWidgets.QApplication.primaryScreen():
             print(f"[Overlay Debug] Screen geometry: {screen.geometry()}")
         self.setWindowFlags(
             QtCore.Qt.WindowType.FramelessWindowHint

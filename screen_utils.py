@@ -11,11 +11,7 @@ def capture_chessboard(region: tuple[int, int, int, int] | None = None) -> Image
     If region is None, capture the entire screen.
     Returns a PIL Image.
     """
-    if region is None:
-        # grab entire screen
-        return ImageGrab.grab()
-    # grab just the given bbox
-    return ImageGrab.grab(bbox=region)
+    return ImageGrab.grab() if region is None else ImageGrab.grab(bbox=region)
 
 
 def find_chessboard_region(debug: bool = False) -> tuple[int, int, int, int]:
