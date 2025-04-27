@@ -157,7 +157,7 @@ def main() -> None:
 
     timer = QtCore.QTimer()
     timer.timeout.connect(update_overlay)
-    timer.start(1)
+    timer.start(250)
 
     app.exec()
     engine.close()
