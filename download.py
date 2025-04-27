@@ -23,19 +23,21 @@ src_folder.mkdir(exist_ok=True)
 
 USER_AGENT = "OCRChessBot/1.0 (contact: your_email@example.com)"
 
-# Download images if not present
-for piece, url in PIECE_URLS.items():
-    if not url.startswith("http"):
-        msg = f"Refusing to open non-http URL: {url}"
-        raise ValueError(msg)
-    filename = f"{piece}.png"
-    dest_path = src_folder / filename
-    if not dest_path.exists():
-        print(f"Downloading {filename} from Wikimedia Commons...")
-        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req) as response, dest_path.open("wb") as out_file:
-            out_file.write(response.read())
-    else:
-        print(f"{filename} already exists, skipping download.")
-
-print("All piece PNGs are downloaded in 'python-chess-pieces'.")
+if __name__ == "__main__":
+    for piece, url in PIECE_URLS.items():
+        if not url.startswith("http"):
+            msg = f"Refusing to open non-http URL: {url}"
+            raise ValueError(msg)
+        filename = f"{piece}.png"
+        dest_path = src_folder / filename
+        if not dest_path.exists():
+            print(f"Downloading {filename} from Wikimedia Commons...")
+            req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+            with (
+                urllib.request.urlopen(req) as response,
+                dest_path.open("wb") as out_file,
+            ):
+                out_file.write(response.read())
+        else:
+            print(f"{filename} already exists, skipping download.")
+    print("All piece PNGs are downloaded in 'python-chess-pieces'.")

@@ -131,6 +131,7 @@ def match_piece_advanced(
 ) -> str:
     """
     Match the square image against all templates using a combination of edge and grayscale matching.
+    Processes original size square, then resizes features.
     Returns the best-matching piece or "" if below threshold.
     """
     square_gray = cv2.cvtColor(square_img, cv2.COLOR_BGR2GRAY)
@@ -139,28 +140,57 @@ def match_piece_advanced(
     square_blur = cv2.GaussianBlur(square_gray_eq, (3, 3), 0)
     square_edges = cv2.Canny(square_blur, 50, 150)
 
+    target_size = (128, 128)
+
+    if square_edges.shape[:2] != target_size:
+        square_edges_resized = cv2.resize(
+            square_edges,
+            target_size,
+            interpolation=cv2.INTER_NEAREST,
+        )
+    else:
+        square_edges_resized = square_edges
+
+    if square_blur.shape[:2] != target_size:
+        square_blur_resized = cv2.resize(
+            square_blur,
+            target_size,
+            interpolation=cv2.INTER_CUBIC,
+        )
+    else:
+        square_blur_resized = square_blur
+
     best_piece = ""
     best_score = -float("inf")
     scores = {}
+
     for piece, tmpl in templates.items():
-        # Grayscale match
+        # Grayscale match (comparing resized input blur to template blur)
         tmpl_gray = cv2.cvtColor(tmpl, cv2.COLOR_BGR2GRAY)
         tmpl_gray_eq = clahe.apply(tmpl_gray)
         tmpl_blur = cv2.GaussianBlur(tmpl_gray_eq, (3, 3), 0)
-        res_gray = cv2.matchTemplate(square_blur, tmpl_blur, cv2.TM_CCOEFF_NORMED)
+        res_gray = cv2.matchTemplate(
+            square_blur_resized,
+            tmpl_blur,
+            cv2.TM_CCOEFF_NORMED,
+        )
         _, max_val_gray, _, _ = cv2.minMaxLoc(res_gray)
 
-        # Edge match
+        # Edge match (comparing resized input edges to template edges)
         tmpl_edges = preprocessed_templates[piece]
-        if square_edges.shape != tmpl_edges.shape:
-            square_edges_resized = cv2.resize(
-                square_edges,
+
+        # The check below should ideally not be needed now, but keep as safety
+        if square_edges_resized.shape[:2] != tmpl_edges.shape[:2]:
+            square_edges_final = cv2.resize(
+                square_edges_resized,
                 (tmpl_edges.shape[1], tmpl_edges.shape[0]),
+                interpolation=cv2.INTER_NEAREST,
             )
         else:
-            square_edges_resized = square_edges
+            square_edges_final = square_edges_resized
+
         res_edge = cv2.matchTemplate(
-            square_edges_resized,
+            square_edges_final,
             tmpl_edges,
             cv2.TM_CCOEFF_NORMED,
         )
@@ -173,7 +203,8 @@ def match_piece_advanced(
             best_score = score
             best_piece = piece
 
-    return "" if best_score < 0.1 else best_piece
+    score_threshold = 0.1
+    return "" if best_score < score_threshold else best_piece
 
 
 def extract_board_from_image(
@@ -225,10 +256,9 @@ def extract_board_from_image(
             x1_crop = max(x1, 0)
             x2_crop = min(x2, w)
             square = img_cv[y1_crop:y2_crop, x1_crop:x2_crop]
-            square_resized = cv2.resize(square, (128, 128))
             piece = (
                 match_piece_advanced(
-                    square_resized,
+                    square,
                     templates,
                     preprocessed_templates,
                     alpha=0.7,
