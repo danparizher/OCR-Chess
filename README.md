@@ -1,53 +1,66 @@
 # OCR Chess - Computer Vision Chess Assistant
 
-**Disclaimer**: This project is for educational purposes only. It does not include mouse automation or any functionality to interact with chess interfaces, as such features could be misused for cheating in live matches. Use responsibly.
+**Disclaimer & Ethical Use**: This project is developed solely for educational purposes, aiming to explore computer vision techniques (like screen scraping and template matching), GUI development (with PyQt6), and chess engine integration (Stockfish). It is **NOT** intended for use in any way that violates the terms of service of chess platforms or compromises the principles of fair play.
 
-## Features
+- **No Automation**: The tool intentionally lacks features for automated mouse control or direct interaction with chess interfaces. Including such capabilities would facilitate cheating, which I strongly discourage.
+- **Educational Focus**: Use this project to learn about the underlying technologies, analyze your own past games (e.g., from screenshots or recordings), or experiment with computer vision on chess positions.
+- **Prohibited Use**: Do **NOT** use this software to gain an unfair advantage in live games (online or over-the-board), tournaments, or any rated matches. Respect the rules of chess communities and platforms.
 
-- **Automatic Chessboard Detection**: Finds chessboard regions on screen
-- **Piece Recognition**: Uses template matching to identify chess pieces
-- **FEN Generation**: Converts recognized positions to FEN notation
-- **Move Suggestion**: Integrates with Stockfish engine for best move analysis
-- **Visual Overlay**: Displays suggested moves directly on screen
-- **Perspective Handling**: Works for both white and black perspectives
+By using this software, you agree to employ it responsibly and ethically, strictly for learning and analysis purposes.
 
-## What Makes This Stand Out?
+## Key Features
 
-Unlike many chess assistants that rely on browser automation (e.g., Playwright or Selenium) or specific website integrations, this project uses **pure computer vision** to analyze chess positions from **any screen source**. This makes it uniquely versatile:
-
-- **Works with Chess960 (Fischer Random Chess)**: Detects and analyzes non-standard starting positions.
-- **Compatible with Chess Variants**: Handles any variant where the board follows traditional 8x8 geometry (e.g., Horde Chess, Three-Check).
-- **No Website Dependencies**: Works with physical boards (via camera) or any digital chess interface, including offline games.
-- **Flexible Input**: Processes screenshots, live screen captures, or even images of physical boards.
+- **Pure Computer Vision Approach**: Analyzes chess positions from any screen source without relying on browser automation or specific website integrations.
+- **Versatile Compatibility**:
+  - Works with Chess960 (Fischer Random Chess) and other 8x8 variants.
+  - Handles digital interfaces, offline games, and even images of physical boards.
+- **Automatic Board & Piece Detection**: Identifies chessboard regions and recognizes pieces using template matching.
+- **FEN Generation & Analysis**: Converts positions to FEN and uses the Stockfish engine for best move suggestions.
+- **Visual Overlay**: Displays suggested moves directly on the screen.
+- **Perspective Handling**: Works for both white and black perspectives.
 
 ## Requirements
 
 - Python 3.13
-- Tesseract OCR (for text recognition)
+- Tesseract OCR ([Installation Guide](https://github.com/UB-Mannheim/tesseract/wiki))
 - Stockfish chess engine (included for Windows)
 
 ## Installation
 
-1. Clone this repository:
+1. **Clone the repository**:
 
-   ```bash
-   git clone https://github.com/yourusername/ocr-chess.git
-   cd ocr-chess
-   ```
+    ```bash
+    git clone https://github.com/yourusername/ocr-chess.git
+    cd ocr-chess
+    ```
 
-2. Install dependencies:
+2. **Create and activate a virtual environment**:
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+    ```bash
+    # Create the environment
+    python -m venv .venv
 
-3. Download chess piece templates (automatically done by `download.py`):
+    # Activate the environment
+    # Windows (cmd.exe)
+    .\.venv\Scripts\activate
+    # Windows (PowerShell)
+    .\.venv\Scripts\Activate.ps1
+    # macOS/Linux (bash/zsh)
+    source .venv/bin/activate
+    ```
 
-   ```bash
-   python download.py
-   ```
+3. **Install dependencies using pip-tools**:
 
-4. Install Tesseract OCR from [https://github.com/UB-Mannheim/tesseract/wiki](https://github.com/UB-Mannheim/tesseract/wiki)
+    ```bash
+    pip install pip-tools
+    pip-sync
+    ```
+
+4. **Download piece templates** (if not present):
+
+    ```bash
+    python download.py
+    ```
 
 ## Usage
 
@@ -57,44 +70,24 @@ Run the main application:
 python main.py
 ```
 
-The application will:
-
-1. Detect the chessboard region on your screen
-2. Continuously analyze the board position
-3. Display suggested moves via an overlay
-
-## Configuration
-
-Edit `config.py` to adjust:
-
-- Board size (default 8x8)
-- Tesseract executable path
-- Highlight colors and thickness
+The application will detect the chessboard, continuously analyze the position, and display suggested moves via an overlay.
 
 ## Technical Details
 
-### Key Components
-
-- **Chess Engine (`chess_engine.py`)**: Interfaces with Stockfish
-- **OCR Utilities (`ocr_utils.py`)**: Handles piece recognition and FEN conversion
-- **Screen Capture (`screen_utils.py`)**: Captures and processes screen regions
-- **Visual Overlay (`overlay.py`)**: Displays move suggestions
-
-### Dependencies
-
-- OpenCV: Computer vision processing
-- PyQt6: Overlay GUI
-- python-chess: Chess logic and FEN handling
-- Stockfish: Chess engine analysis
-- pytesseract: Optional text recognition
-
-## License
-
-MIT License - See [LICENSE](LICENSE) for details
+- **Core Modules**:
+  - `chess_engine.py`: Stockfish interface
+  - `ocr_utils.py`: Piece recognition & FEN conversion
+  - `screen_utils.py`: Screen capture & processing
+  - `overlay.py`: Move suggestion display
+- **Key Dependencies**:
+  - OpenCV
+  - PyQt6
+  - python-chess
+  - Stockfish
+  - pytesseract (optional)
 
 ## Future Enhancements
 
-- **Improved OCR Recognition**: Enhance accuracy for smaller board sizes where current recognition may fail.
-- **Player Perspective Detection**: Better detection of whether the user is playing as white or black.
-- **Performance Optimizations**: Reduce CPU consumption for smoother operation, especially during continuous analysis.
-- **Smoother Overlay**: Optimize the overlay rendering to reduce lag and improve visual fluidity.
+- Enhance player perspective detection.
+- Optimize performance (CPU usage).
+- Smoother overlay rendering.
