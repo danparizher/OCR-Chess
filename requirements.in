@@ -1,0 +1,10 @@
+numpy
+opencv-python
+pillow
+pip-tools
+pyautogui
+PyQt6
+python-chess
+pytesseract
+stockfish
+xxhash
