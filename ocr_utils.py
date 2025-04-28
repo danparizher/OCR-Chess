@@ -322,42 +322,72 @@ def board_to_fen(board: list[list[str]], turn: str = "w") -> str:
 
 def detect_player_color(board: list[list[str]]) -> str:
     """
-    Detect if the player is white or black based on the bottom row of the board array.
-    Returns 'w' if white is at the bottom, 'b' if black is at the bottom.
+    Detect if the player is white or black based on the distribution of pieces
+    on the board. Returns 'w' if white's pieces are predominantly on the
+    bottom half, 'b' if black's pieces are predominantly on the bottom half.
+    Falls back to king position if distribution is unclear.
     """
     white_pieces = {"K", "Q", "R", "B", "N", "P"}
     black_pieces = {"k", "q", "r", "b", "n", "p"}
 
-    # Check the bottom row for majority of white or black pieces
-    bottom_row = board[-1]
-    white_count = sum(piece in white_pieces for piece in bottom_row)
-    black_count = sum(piece in black_pieces for piece in bottom_row)
+    white_bottom_count = 0
+    white_top_count = 0
+    black_bottom_count = 0
+    black_top_count = 0
 
-    if white_count > black_count:
+    for i, row in enumerate(board):
+        for piece in row:
+            if piece in white_pieces:
+                if i >= BOARD_SIZE / 2:
+                    white_bottom_count += 1
+                else:
+                    white_top_count += 1
+            elif piece in black_pieces:
+                if i >= BOARD_SIZE / 2:
+                    black_bottom_count += 1
+                else:
+                    black_top_count += 1
+
+    # Check if bottom half has more white than black AND top half has more black than white
+    if white_bottom_count > black_bottom_count and black_top_count > white_top_count:
         return "w"
-    if black_count > white_count:
+
+    # Check if bottom half has more black than white AND top half has more white than black
+    if black_bottom_count > white_bottom_count and white_top_count > black_top_count:
+        print("[detect_player_color] Detected black based on piece distribution")
         return "b"
 
-    # If the bottom row is ambiguous, check the top row
-    top_row = board[0]
-    white_count_top = sum(piece in white_pieces for piece in top_row)
-    black_count_top = sum(piece in black_pieces for piece in top_row)
-
-    if white_count_top > black_count_top:
-        return "b"
-    if black_count_top > white_count_top:
-        return "w"
-
-    # If still ambiguous, check the position of the kings
+    # Fallback: Check king positions if distribution is ambiguous
     for i, row in enumerate(board):
         for piece in row:
             if piece == "K":
-                return "w" if i > 3 else "b"
+                return _get_color_from_king_pos_and_log(
+                    "w",
+                    i,
+                    "b",
+                    " based on white king position",
+                )
             if piece == "k":
-                return "b" if i > 3 else "w"
-
-    # Default to white if still unclear
+                return _get_color_from_king_pos_and_log(
+                    "b",
+                    i,
+                    "w",
+                    " based on black king position",
+                )
+    print("[detect_player_color] No clear detection, defaulting to white")
+    # Default to white if still unclear (should be rare)
     return "w"
+
+
+def _get_color_from_king_pos_and_log(
+    primary_color: str,
+    i: int,
+    secondary_color: str,
+    log_suffix: str,
+) -> str:
+    result = primary_color if i >= BOARD_SIZE / 2 else secondary_color
+    print(f"[detect_player_color] Detected {result}{log_suffix}")
+    return result
 
 
 def flip_board(board: list[list[str]]) -> list[list[str]]:
