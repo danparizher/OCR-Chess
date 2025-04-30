@@ -135,10 +135,9 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-<<<<<<< HEAD
-=======
+
 data/
->>>>>>> master
+chess_piece_cnn.pth
 
 # Spyder project settings
 .spyderproject
@@ -175,8 +174,4 @@ cython_debug/
 .ruff_cache/
 
 # PyPI configuration file
-<<<<<<< HEAD
 .pypirc
-=======
-.pypirc
->>>>>>> master

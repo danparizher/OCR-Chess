@@ -1,249 +1,121 @@
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
 import pytesseract
+import torch
 from PIL import Image
+from torchvision import transforms
 
-from config import BOARD_SIZE, TESSERACT_CMD
+from config import BOARD_SIZE, INPUT_SIZE, TESSERACT_CMD
+
+# Import the model class from the training script
+from train_cnn import SimpleCNN
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
 
 
-def load_piece_templates(
-    template_folder: str = "python-chess-pieces",
-    size: tuple[int, int] = (128, 128),
-) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
-    """
-    Load all piece templates from the given folder as color images (no preprocessing).
-    Handles transparency by replacing transparent pixels with white.
-    Returns a tuple of dicts: (original_templates, preprocessed_templates)
-    {piece_letter: template_image}, {piece_letter: preprocessed_template}
+# --- CNN Model Loading ---
+def load_cnn_model(
+    model_path: str | Path = "chess_piece_cnn.pth",
+    num_classes: int = 13,
+    input_size: int = INPUT_SIZE,
+) -> tuple[torch.nn.Module | None, transforms.Compose | None, list[str] | None]:
+    """Loads the trained CNN model and defines the necessary transforms."""
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model = SimpleCNN(num_classes=num_classes)
+    try:
+        model.load_state_dict(torch.load(model_path, map_location=device))
+        print(f"Loaded trained model from {model_path}")
+    except FileNotFoundError:
+        print(f"Error: Model file not found at {model_path}. Train the model first.")
+        return None, None, None
+    except Exception as e:
+        print(f"Error loading model state_dict: {e}")
+        return None, None, None
 
-    Raises:
-        FileNotFoundError: If a template image cannot be loaded.
-    """
-    piece_map = {
-        "wK.png": "K",
-        "wQ.png": "Q",
-        "wR.png": "R",
-        "wB.png": "B",
-        "wN.png": "N",
-        "wP.png": "P",
-        "bK.png": "k",
-        "bQ.png": "q",
-        "bR.png": "r",
-        "bB.png": "b",
-        "bN.png": "n",
-        "bP.png": "p",
-    }
-    templates = {}
-    preprocessed_templates = {}
-    for path in Path(template_folder).iterdir():
-        filename = path.name
-        if filename in piece_map:
-            # Load with alpha channel
-            img = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
-            if img is None:
-                msg = f"Could not load image at {filename}"
-                raise FileNotFoundError(msg)
-            # If image has alpha channel, replace transparent pixels with white
-            if img.shape[2] == 4:
-                alpha = img[:, :, 3]
-                white_bg = np.ones_like(img[:, :, :3], dtype=np.uint8) * 255
-                mask = alpha == 0
-                img_rgb = img[:, :, :3].copy()
-                img_rgb[mask] = white_bg[mask]
-            else:
-                img_rgb = img
-            # Convert to BGR (if not already)
-            if img_rgb.shape[2] == 3:
-                img_bgr = (
-                    cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
-                    if img_rgb.shape[2] == 3
-                    else img_rgb
-                )
-            else:
-                img_bgr = img_rgb
-            img_bgr = cv2.resize(img_bgr, size)
-            templates[piece_map[filename]] = img_bgr
-            # Preprocess template: grayscale, CLAHE, blur, Canny
-            tmpl_gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            tmpl_gray = clahe.apply(tmpl_gray)
-            tmpl_gray = cv2.GaussianBlur(tmpl_gray, (3, 3), 0)
-            tmpl_edges = cv2.Canny(tmpl_gray, 50, 150)
-            preprocessed_templates[piece_map[filename]] = tmpl_edges
-    return templates, preprocessed_templates
+    model.to(device)
+    model.eval()  # Set model to evaluation mode
 
+    # Define the same transforms used during validation
+    # IMPORTANT: Ensure these match the validation transforms in train_cnn.py
+    data_transform = transforms.Compose([
+        transforms.Resize((input_size, input_size)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+    ])
 
-def match_piece(
-    square_img: np.ndarray,
-    preprocessed_templates: dict[str, np.ndarray],
-) -> str:
-    """
-    Match the square image against all preprocessed templates (edge maps).
-    Returns the best-matching piece or "" if below threshold.
-    """
-    best_piece = ""
-    best_score = -1.0
-    primary_scores = {}
-    # Preprocess square: grayscale, CLAHE, blur, Canny
-    square_gray = cv2.cvtColor(square_img, cv2.COLOR_BGR2GRAY)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    square_gray = clahe.apply(square_gray)
-    square_gray = cv2.GaussianBlur(square_gray, (3, 3), 0)
-    square_edges = cv2.Canny(square_gray, 50, 150)
-    for piece, tmpl_edges in preprocessed_templates.items():
-        if square_edges.shape != tmpl_edges.shape:
-            square_edges_resized = cv2.resize(
-                square_edges,
-                (tmpl_edges.shape[1], tmpl_edges.shape[0]),
-            )
-        else:
-            square_edges_resized = square_edges
-        res = cv2.matchTemplate(square_edges_resized, tmpl_edges, cv2.TM_CCOEFF_NORMED)
-        _min_val, max_val, _min_loc, _max_loc = cv2.minMaxLoc(res)
-        primary_scores[piece] = max_val
-        if max_val > best_score:
-            best_score = float(max_val)
-            best_piece = piece
-    if primary_scores:
-        best_piece = max(primary_scores, key=lambda k: primary_scores[k])
-        best_score = primary_scores[best_piece]
-    else:
-        best_piece = ""
-        best_score = -1.0
-    if all(abs(score) < 1e-6 for score in primary_scores.values()) or all(
-        score < 0 for score in primary_scores.values()
-    ):
-        return ""
-    return best_piece
-
-
-def match_piece_advanced(
-    square_img: np.ndarray,
-    templates: dict[str, np.ndarray],
-    preprocessed_templates: dict[str, np.ndarray],
-    alpha: float = 0.7,
-) -> str:
-    """
-    Match the square image against all templates using a combination of edge and grayscale matching.
-    Processes original size square, then resizes features.
-    Returns the best-matching piece or "" if below threshold.
-    """
-    square_gray = cv2.cvtColor(square_img, cv2.COLOR_BGR2GRAY)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    square_gray_eq = clahe.apply(square_gray)
-    square_blur = cv2.GaussianBlur(square_gray_eq, (3, 3), 0)
-    square_edges = cv2.Canny(square_blur, 50, 150)
-
-    target_size = (128, 128)
-
-    if square_edges.shape[:2] != target_size:
-        square_edges_resized = cv2.resize(
-            square_edges,
-            target_size,
-            interpolation=cv2.INTER_NEAREST,
+    # We need the class names in the order they were used during training
+    # Typically derived from folder names by ImageFolder
+    # IMPORTANT: Ensure this list matches the output of train_cnn.py
+    class_names = [
+        "bB",
+        "bK",
+        "bN",
+        "bP",
+        "bQ",
+        "bR",
+        "empty",
+        "wB",
+        "wK",
+        "wN",
+        "wP",
+        "wQ",
+        "wR",
+    ]
+    # TODO: Consider saving class_names list alongside the model during training
+    #       or inferring it reliably from the data directory structure.
+    if len(class_names) != num_classes:
+        print(
+            f"Warning: Number of class names ({len(class_names)}) does not match num_classes ({num_classes})",
         )
-    else:
-        square_edges_resized = square_edges
 
-    if square_blur.shape[:2] != target_size:
-        square_blur_resized = cv2.resize(
-            square_blur,
-            target_size,
-            interpolation=cv2.INTER_CUBIC,
-        )
-    else:
-        square_blur_resized = square_blur
+    return model, data_transform, class_names
 
-    best_piece = ""
-    best_score = -float("inf")
-    scores = {}
 
-    for piece, tmpl in templates.items():
-        # Grayscale match (comparing resized input blur to template blur)
-        tmpl_gray = cv2.cvtColor(tmpl, cv2.COLOR_BGR2GRAY)
-        tmpl_gray_eq = clahe.apply(tmpl_gray)
-        tmpl_blur = cv2.GaussianBlur(tmpl_gray_eq, (3, 3), 0)
-        res_gray = cv2.matchTemplate(
-            square_blur_resized,
-            tmpl_blur,
-            cv2.TM_CCOEFF_NORMED,
-        )
-        _, max_val_gray, _, _ = cv2.minMaxLoc(res_gray)
-
-        # Edge match (comparing resized input edges to template edges)
-        tmpl_edges = preprocessed_templates[piece]
-
-        # The check below should ideally not be needed now, but keep as safety
-        if square_edges_resized.shape[:2] != tmpl_edges.shape[:2]:
-            square_edges_final = cv2.resize(
-                square_edges_resized,
-                (tmpl_edges.shape[1], tmpl_edges.shape[0]),
-                interpolation=cv2.INTER_NEAREST,
-            )
-        else:
-            square_edges_final = square_edges_resized
-
-        res_edge = cv2.matchTemplate(
-            square_edges_final,
-            tmpl_edges,
-            cv2.TM_CCOEFF_NORMED,
-        )
-        _, max_val_edge, _, _ = cv2.minMaxLoc(res_edge)
-
-        # Combine scores
-        score = alpha * max_val_edge + (1 - alpha) * max_val_gray
-        scores[piece] = score
-        if score > best_score:
-            best_score = score
-            best_piece = piece
-
-    score_threshold = 0.1
-    return "" if best_score < score_threshold else best_piece
+# --- Board Extraction (CNN Version) ---
 
 
 def extract_board_from_image(
     image_or_path: str | Image.Image | np.ndarray,
-    template_folder: str = "python-chess-pieces",
-    use_template_matching: bool = True,
-    templates: dict[str, np.ndarray] | None = None,
-    preprocessed_templates: dict[str, np.ndarray] | None = None,
+    model: torch.nn.Module,
+    transform: transforms.Compose,
+    class_names: list[str],
 ) -> list[list[str]]:
     """
-    Given a path or image/array, use template matching to extract piece positions.
+    Given a path or image/array, use the trained CNN model to extract piece positions.
     Returns a 2D list representing the board (8x8).
+    Raises:
+        TypeError: If input type is unsupported.
     """
-    # Accepts either a file path, PIL Image, or numpy array
+    # Convert input to PIL Image (RGB)
     if isinstance(image_or_path, str):
-        image = Image.open(image_or_path)
-        img_cv = np.array(image)
-        img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2BGR)
-    elif isinstance(image_or_path, Image.Image):
-        img_cv = np.array(image_or_path)
-        img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2BGR)
+        pil_image = Image.open(image_or_path).convert("RGB")
     elif isinstance(image_or_path, np.ndarray):
-        img_cv = image_or_path
-        if img_cv.shape[2] == 4:
-            img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGBA2BGR)
-        elif img_cv.shape[2] == 3:
-            img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2BGR)
+        # Assuming BGR from OpenCV capture, convert to RGB
+        if image_or_path.shape[2] == 3:
+            pil_image = Image.fromarray(cv2.cvtColor(image_or_path, cv2.COLOR_BGR2RGB))
+        elif image_or_path.shape[2] == 4:
+            pil_image = Image.fromarray(cv2.cvtColor(image_or_path, cv2.COLOR_BGRA2RGB))
+        else:  # Grayscale?
+            pil_image = Image.fromarray(image_or_path).convert("RGB")
+    elif isinstance(image_or_path, Image.Image):
+        pil_image = image_or_path.convert("RGB")
+    else:
+        msg = "Unsupported input type for image_or_path"
+        raise TypeError(msg)
 
-    h, w = img_cv.shape[:2]
+    w, h = pil_image.size
     square_h = h / BOARD_SIZE
     square_w = w / BOARD_SIZE
     board = [["" for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
 
-    # Use provided templates or load if not given
-    if templates is None or preprocessed_templates is None:
-        templates, preprocessed_templates = load_piece_templates(
-            template_folder=template_folder,
-            size=(128, 128),
-        )
+    device = next(model.parameters()).device
 
     for i in range(BOARD_SIZE):
         for j in range(BOARD_SIZE):
@@ -251,22 +123,46 @@ def extract_board_from_image(
             y2 = round((i + 1) * square_h)
             x1 = round(j * square_w)
             x2 = round((j + 1) * square_w)
-            y1_crop = max(y1, 0)
-            y2_crop = min(y2, h)
-            x1_crop = max(x1, 0)
-            x2_crop = min(x2, w)
-            square = img_cv[y1_crop:y2_crop, x1_crop:x2_crop]
-            piece = (
-                match_piece_advanced(
-                    square,
-                    templates,
-                    preprocessed_templates,
-                    alpha=0.7,
-                )
-                if use_template_matching
-                else ""
-            )
-            board[i][j] = piece
+
+            # Crop square from PIL image
+            square_img_pil = pil_image.crop((x1, y1, x2, y2))
+
+            # Apply transformations
+            input_tensor = transform(square_img_pil)
+            assert isinstance(input_tensor, torch.Tensor)  # Ensure it's a tensor
+            # Add batch dimension (model expects batches)
+            input_batch = input_tensor.unsqueeze(0).to(device)
+
+            # Make prediction
+            with torch.no_grad():
+                output = model(input_batch)
+                _, predicted_idx = torch.max(output, 1)
+
+            # Map prediction index to class name
+            predicted_class_index = int(predicted_idx.item())  # Cast to int
+            predicted_class = class_names[predicted_class_index]
+
+            # Map class name to FEN representation (handle 'empty')
+            piece_map = {
+                "bB": "b",
+                "bK": "k",
+                "bN": "n",
+                "bP": "p",
+                "bQ": "q",
+                "bR": "r",
+                "wB": "B",
+                "wK": "K",
+                "wN": "N",
+                "wP": "P",
+                "wQ": "Q",
+                "wR": "R",
+                "empty": "",  # Map 'empty' class to empty string for the board
+            }
+            board[i][j] = piece_map.get(
+                predicted_class,
+                "",
+            )  # Default to empty if class not in map
+
     return board
 
 
@@ -320,78 +216,135 @@ def board_to_fen(board: list[list[str]], turn: str = "w") -> str:
     return f"{fen} {turn} KQkq - 0 1"
 
 
-def detect_player_color(board: list[list[str]]) -> str:
+def detect_player_color_and_orientation(board: list[list[str]]) -> tuple[str, bool]:
     """
-    Detect if the player is white or black based on the distribution of pieces
-    on the board. Returns 'w' if white's pieces are predominantly on the
-    bottom half, 'b' if black's pieces are predominantly on the bottom half.
-    Falls back to king position if distribution is unclear.
+    Determine player color ('w' or 'b') and board orientation.
+
+    Returns:
+        tuple[str, bool]: (turn, is_white_at_bottom)
+        - turn: 'w' or 'b' (best guess based on king back-rank relative to orientation)
+        - is_white_at_bottom: True if the board array likely represents
+                              White pieces at the bottom (rows 4-7).
+                              False if Black pieces are likely at the bottom.
     """
-    white_pieces = {"K", "Q", "R", "B", "N", "P"}
-    black_pieces = {"k", "q", "r", "b", "n", "p"}
-
-    white_bottom_count = 0
-    white_top_count = 0
-    black_bottom_count = 0
-    black_top_count = 0
-
-    for i, row in enumerate(board):
-        for piece in row:
-            if piece in white_pieces:
-                if i >= BOARD_SIZE / 2:
-                    white_bottom_count += 1
-                else:
-                    white_top_count += 1
-            elif piece in black_pieces:
-                if i >= BOARD_SIZE / 2:
-                    black_bottom_count += 1
-                else:
-                    black_top_count += 1
-
-    # Check if bottom half has more white than black AND top half has more black than white
-    if white_bottom_count > black_bottom_count and black_top_count > white_top_count:
-        return "w"
-
-    # Check if bottom half has more black than white AND top half has more white than black
-    if black_bottom_count > white_bottom_count and white_top_count > black_top_count:
-        print("[detect_player_color] Detected black based on piece distribution")
-        return "b"
-
-    # Fallback: Check king positions if distribution is ambiguous
-    for i, row in enumerate(board):
-        for piece in row:
+    white_king_pos = None
+    black_king_pos = None
+    for r, row in enumerate(board):
+        for c, piece in enumerate(row):
             if piece == "K":
-                return _get_color_from_king_pos_and_log(
-                    "w",
-                    i,
-                    "b",
-                    " based on white king position",
-                )
-            if piece == "k":
-                return _get_color_from_king_pos_and_log(
-                    "b",
-                    i,
-                    "w",
-                    " based on black king position",
-                )
-    print("[detect_player_color] No clear detection, defaulting to white")
-    # Default to white if still unclear (should be rare)
-    return "w"
+                white_king_pos = (r, c)
+            elif piece == "k":
+                black_king_pos = (r, c)
+
+    if white_king_pos is None or black_king_pos is None:
+        # If kings are missing, cannot determine orientation or turn reliably
+        print(
+            "Warning: Could not find both kings. Defaulting to White's turn, White-at-bottom.",
+        )
+        return "w", True
+
+    w_row, _ = white_king_pos
+    b_row, _ = black_king_pos
+
+    # --- Determine Orientation --- based on relative king positions
+    is_white_at_bottom = True  # Default assumption
+    if w_row >= 4 and b_row < 4:
+        is_white_at_bottom = True
+    elif b_row >= 4 and w_row < 4:
+        is_white_at_bottom = False
+    else:
+        # Use piece count heuristic when king positions are ambiguous
+        is_white_at_bottom = _guess_orientation_by_piece_count(
+            board,
+            white_king_pos,
+            black_king_pos,
+        )
+    # --- Determine Turn --- based on orientation and back-rank check
+    turn = "w"  # Default turn
+    log_msg = ""
+    if is_white_at_bottom:
+        # White at bottom: W expected on row 7 (rank 1), B on row 0 (rank 8)
+        w_on_back = w_row == 7
+        b_on_back = b_row == 0
+        turn = (
+            "w"
+            if (
+                (w_on_back and not b_on_back)
+                or ((not b_on_back or w_on_back) and b_on_back)
+                or not b_on_back
+            )
+            else "b"
+        )
+    else:
+        # Black at bottom: B expected on row 7 (rank 8), W on row 0 (rank 1)
+        b_on_back = b_row == 7
+        w_on_back = w_row == 0
+        if (
+            (b_on_back and not w_on_back)
+            or ((not w_on_back or b_on_back) and w_on_back)
+            or not w_on_back
+        ):
+            turn = "b"
+        else:
+            turn = "w"
+    print(log_msg)
+    return turn, is_white_at_bottom
 
 
-def _get_color_from_king_pos_and_log(
-    primary_color: str,
-    i: int,
-    secondary_color: str,
-    log_suffix: str,
-) -> str:
-    result = primary_color if i >= BOARD_SIZE / 2 else secondary_color
-    print(f"[detect_player_color] Detected {result}{log_suffix}")
+def _guess_orientation_by_piece_count(
+    board: list[list[str]],
+    white_king_pos: tuple[int, int],
+    black_king_pos: tuple[int, int],
+) -> bool:
+    """
+    Guess board orientation based on piece counts when king positions are ambiguous.
+
+    Returns:
+        bool: True if White is likely at the bottom, False otherwise.
+    """
+    # Ambiguous: Kings on same side, or one/both exactly on midline.
+    # Using piece count heuristic as tie-breaker.
+    white_top_count = 0
+    black_top_count = 0
+    white_bottom_count = 0
+    black_bottom_count = 0
+
+    for r, row_pieces in enumerate(board):
+        for piece in row_pieces:
+            if r < 4:  # Top half
+                if piece.isupper():
+                    white_top_count += 1
+                elif piece.islower():
+                    black_top_count += 1
+            elif piece.isupper():
+                white_bottom_count += 1
+            elif piece.islower():
+                black_bottom_count += 1
+
+    if white_bottom_count > black_bottom_count:
+        result = True
+        print(
+            f"Info: Ambiguous kings (W: {white_king_pos}, B: {black_king_pos}). "
+            f"Orientation guess (White at bottom) based on piece count "
+            f"(Bottom: W={white_bottom_count}, B={black_bottom_count}; Top: W={white_top_count}, B={black_top_count}).",
+        )
+    elif black_bottom_count > white_bottom_count:
+        result = False
+        print(
+            f"Info: Ambiguous kings (W: {white_king_pos}, B: {black_king_pos}). "
+            f"Orientation guess (Black at bottom) based on piece count "
+            f"(Bottom: W={white_bottom_count}, B={black_bottom_count}; Top: W={white_top_count}, B={black_top_count}).",
+        )
+    else:  # Counts are equal, stick to default
+        result = True
+        print(
+            f"Warning: Ambiguous king positions (W: {white_king_pos}, B: {black_king_pos}) "
+            f"and piece counts are equal (Bottom: W={white_bottom_count}, B={black_bottom_count}; Top: W={white_top_count}, B={black_top_count}). Defaulting to White-at-bottom.",
+        )
+
     return result
 
 
 def flip_board(board: list[list[str]]) -> list[list[str]]:
-    """
-    Flip the board 180 degrees (for black's perspective).
-    """
+    """Flips the board vertically and horizontally."""
     return [row[::-1] for row in board[::-1]]
