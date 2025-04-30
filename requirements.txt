@@ -69,13 +69,10 @@ nvidia-nvtx-cu12==12.6.77
 opencv-python==4.11.0.86
     # via -r requirements.in
 packaging==25.0
-    # via
-    #   build
-    #   pytesseract
+    # via build
 pillow==11.2.1
     # via
     #   -r requirements.in
-    #   pytesseract
     #   torchvision
 pip-tools==7.4.1
     # via -r requirements.in
@@ -101,8 +98,6 @@ pyrect==0.2.0
     # via pygetwindow
 pyscreeze==1.0.1
     # via pyautogui
-pytesseract==0.3.13
-    # via -r requirements.in
 python-chess==1.999
     # via -r requirements.in
 python3-xlib==0.15
