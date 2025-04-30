@@ -39,7 +39,7 @@ class ChessEngine:
                 return result.move.uci()
             return None
         except chess.engine.EngineTerminatedError:
-            logger.exception("Engine terminated unexpectedly")
+            logger.error("Engine terminated unexpectedly")  # noqa: TRY400
             raise
         except Exception:
             logger.exception("Error getting best move")
