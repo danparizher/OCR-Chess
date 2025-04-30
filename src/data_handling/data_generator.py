@@ -36,6 +36,18 @@ PIECE_TYPES = [
 # --- Helper Functions ---
 
 
+def _load_single_image(img_path: Path) -> tuple[str | None, Image.Image | None]:
+    """Loads a single image, returning None if loading fails."""
+    try:
+        # Use stem for key (e.g., 'wP' from 'wP.png')
+        img = Image.open(img_path).convert("RGBA")
+    except Exception as e:
+        print(f"Error loading image {img_path}: {e}")
+        return None, None
+    else:
+        return img_path.stem, img
+
+
 def load_images_from_dir(directory: Path) -> dict[str, Image.Image]:
     """Loads PNG images from a directory into a dictionary."""
     images: dict[str, Image.Image] = {}
@@ -43,12 +55,29 @@ def load_images_from_dir(directory: Path) -> dict[str, Image.Image]:
         print(f"Warning: Directory not found: {directory}")
         return images
     for img_path in directory.glob("*.png"):
-        try:
-            # Use stem for key (e.g., 'wP' from 'wP.png')
-            images[img_path.stem] = Image.open(img_path).convert("RGBA")
-        except Exception as e:
-            print(f"Error loading image {img_path}: {e}")
+        stem, img = _load_single_image(img_path)
+        if stem and img:
+            images[stem] = img
     return images
+
+
+def _resize_and_position_piece(
+    piece_img: Image.Image,
+    target_size: tuple[int, int],
+) -> tuple[Image.Image, tuple[int, int]]:
+    """Resizes the piece to fit and calculates its centered position."""
+    # Resize piece to fit within the square (e.g., 80% of size)
+    piece_max_dim = int(min(target_size) * 0.8)
+    piece_resized = piece_img.copy()
+    piece_resized.thumbnail(
+        (piece_max_dim, piece_max_dim),
+        Image.Resampling.LANCZOS,
+    )
+
+    # Calculate position to center the piece
+    paste_x = (target_size[0] - piece_resized.width) // 2
+    paste_y = (target_size[1] - piece_resized.height) // 2
+    return piece_resized, (paste_x, paste_y)
 
 
 def apply_random_augmentation(image: Image.Image) -> Image.Image:
@@ -85,23 +114,13 @@ def create_synthetic_image(
     )
 
     if piece_img:
-        # Resize piece to fit within the square (e.g., 80% of size)
-        piece_max_dim = int(min(target_size) * 0.8)
-        piece_resized = piece_img.copy()
-        piece_resized.thumbnail(
-            (piece_max_dim, piece_max_dim),
-            Image.Resampling.LANCZOS,
-        )
-
-        # Calculate position to center the piece
-        paste_x = (target_size[0] - piece_resized.width) // 2
-        paste_y = (target_size[1] - piece_resized.height) // 2
+        piece_resized, paste_pos = _resize_and_position_piece(piece_img, target_size)
 
         # Augment the piece before pasting
         # piece_augmented = apply_random_augmentation(piece_resized) # Augment piece only?
 
         # Paste piece using its alpha channel as mask
-        bg_copy.paste(piece_resized, (paste_x, paste_y), piece_resized)
+        bg_copy.paste(piece_resized, paste_pos, piece_resized)
 
     # Augment the final composite image
     final_image = apply_random_augmentation(bg_copy)

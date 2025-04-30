@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageGrab
 
-from ocr_utils import count_pieces_in_region
+from src.utils.ocr_utils import count_pieces_in_region
 
 if TYPE_CHECKING:
     import torch

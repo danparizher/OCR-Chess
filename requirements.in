@@ -5,7 +5,6 @@ pip-tools
 pyautogui
 PyQt6
 python-chess
-pytesseract
 stockfish
 torch
 torchvision

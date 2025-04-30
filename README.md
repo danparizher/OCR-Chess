@@ -23,7 +23,6 @@ By using this software, you agree to employ it responsibly and ethically, strict
 
 - Python 3.13
 - PyTorch
-- Tesseract OCR (Optional, may be used for specific board detection scenarios) ([Installation Guide](https://github.com/UB-Mannheim/tesseract/wiki))
 - Stockfish chess engine (included for Windows)
 
 ## Installation
@@ -103,7 +102,6 @@ The application will detect the chessboard, continuously analyze the position, a
   - Stockfish
   - PyTorch
   - TorchVision
-  - pytesseract (Optional)
 
 ## Future Enhancements
 

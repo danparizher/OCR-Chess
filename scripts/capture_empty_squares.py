@@ -2,14 +2,13 @@ from pathlib import Path
 
 from PIL import Image
 
-from screen_utils import capture_chessboard, find_chessboard_region
+from src.utils.ocr_utils import load_cnn_model
+from src.utils.screen_utils import capture_chessboard, find_chessboard_region
 
 # --- Configuration ---
-OUTPUT_DIR = Path("./empty_squares")
+OUTPUT_DIR = Path("./data/empty_squares")
 NUM_SAMPLES_PER_COLOR = 10  # Number of empty squares to save per color (light/dark)
-SQUARE_DETECTION_THRESHOLD = (
-    20  # Simple threshold to distinguish light/dark squares based on avg pixel value
-)
+SQUARE_DETECTION_THRESHOLD = 20
 
 # --- Main Logic ---
 
@@ -17,10 +16,19 @@ SQUARE_DETECTION_THRESHOLD = (
 def capture_and_save_empty_squares() -> None:
     """Finds the chessboard, captures it, extracts empty squares, and saves them."""
 
+    # Load the CNN model first
+    print("Loading CNN model...")
+    model, transform, class_names = load_cnn_model()
+    if model is None or transform is None or class_names is None:
+        print("Error: Failed to load CNN model. Cannot find chessboard without it.")
+        return
+
     print("Attempting to find the chessboard region...")
     region = find_chessboard_region(
-        debug=False,
-    )  # Use debug=True to see the detection process
+        model=model,
+        transform=transform,
+        class_names=class_names,
+    )
     if not region:
         print("Error: Chessboard region not found. Make sure it's visible on screen.")
         return

@@ -11,16 +11,16 @@ import xxhash
 from PIL import Image
 from PyQt6 import QtCore
 
-from chess_engine import ChessEngine
-from ocr_utils import (
+from src.engine.chess_engine import ChessEngine
+from src.overlay import show_overlay
+from src.utils.ocr_utils import (
     board_to_fen,
     detect_player_color_and_orientation,
     extract_board_from_image,
     flip_board,
     load_cnn_model,
 )
-from overlay import show_overlay
-from screen_utils import (
+from src.utils.screen_utils import (
     capture_chessboard,
     find_chessboard_region,
 )

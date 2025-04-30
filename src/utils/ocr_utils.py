@@ -4,25 +4,21 @@ from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
-import pytesseract
 import torch
 from PIL import Image
 from torchvision import transforms
 
-from config import BOARD_SIZE, INPUT_SIZE, TESSERACT_CMD
-
-# Import the model class from the training script
-from train_cnn import SimpleCNN
+from src.config import BOARD_SIZE, INPUT_SIZE
+from src.models.cnn_definition import SimpleCNN
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
-
-pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
 
 
 # --- CNN Model Loading ---
 def load_cnn_model(
-    model_path: str | Path = "chess_piece_cnn.pth",
+    model_path: str | Path = "models/chess_piece_cnn.pth",
     num_classes: int = 13,
     input_size: int = INPUT_SIZE,
 ) -> tuple[torch.nn.Module | None, transforms.Compose | None, list[str] | None]:
@@ -80,40 +76,25 @@ def load_cnn_model(
     return model, data_transform, class_names
 
 
-# --- CNN Piece Counting Helper ---
-
-
-def count_pieces_in_region(
-    image: Image.Image,
+# --- Internal CNN Square Prediction Helper ---
+def _iter_square_predictions(
+    pil_image: Image.Image,
     model: torch.nn.Module,
     transform: transforms.Compose,
     class_names: list[str],
-) -> int:
+) -> Iterator[tuple[int, int, str]]:
     """
-    Counts the number of non-empty squares in a given image region using the CNN model.
+    Iterates through board squares, performs CNN prediction, and yields results.
 
-    Args:
-        image: PIL Image of the region to analyze (assumed to be roughly square).
-        model: The loaded CNN model.
-        transform: The torchvision transforms to apply.
-        class_names: List of class names the model predicts.
-
-    Returns:
-        int: The number of squares classified as not 'empty'.
+    Yields:
+        tuple[int, int, str]: Row index, column index, and predicted class name.
     """
-    if not isinstance(image, Image.Image):
-        print("Warning: count_pieces_in_region expects a PIL Image.")
-        return 0
-
-    pil_image = image.convert("RGB")
     w, h = pil_image.size
     if w == 0 or h == 0:
-        return 0  # Avoid division by zero for empty images
+        return  # Stop iteration for empty images
 
     square_h = h / BOARD_SIZE
     square_w = w / BOARD_SIZE
-    piece_count = 0
-
     device = next(model.parameters()).device
 
     for i in range(BOARD_SIZE):
@@ -133,30 +114,51 @@ def count_pieces_in_region(
             # Crop square from PIL image
             square_img_pil = pil_image.crop((x1, y1, x2, y2))
 
-            # Apply transformations
+            # Apply transformations and predict
             try:
                 input_tensor = transform(square_img_pil)
                 assert isinstance(input_tensor, torch.Tensor)
                 input_batch = input_tensor.unsqueeze(0).to(device)
 
-                # Make prediction
                 with torch.no_grad():
                     output = model(input_batch)
                     _, predicted_idx = torch.max(output, 1)
 
                 predicted_class_index = int(predicted_idx.item())
                 predicted_class = class_names[predicted_class_index]
-
-                # Increment count if the square is not classified as 'empty'
-                if predicted_class != "empty":
-                    piece_count += 1
+                yield i, j, predicted_class
             except Exception as e:
                 print(
-                    f"Error processing square ({i},{j}) in count_pieces_in_region: {e}",
+                    f"Error processing square ({i},{j}) during prediction: {e}",
                 )
-                # Continue to the next square even if one fails
+                # Optionally yield an error marker or skip? Currently skips.
 
-    return piece_count
+
+# --- CNN Piece Counting Helper ---
+def count_pieces_in_region(
+    image: Image.Image,
+    model: torch.nn.Module,
+    transform: transforms.Compose,
+    class_names: list[str],
+) -> int:
+    """
+    Counts the number of non-empty squares in a given image region using the CNN model.
+    (Refactored to use _iter_square_predictions)
+    """
+    if not isinstance(image, Image.Image):
+        print("Warning: count_pieces_in_region expects a PIL Image.")
+        return 0
+
+    pil_image = image.convert("RGB")
+    return sum(
+        predicted_class != "empty"
+        for _, _, predicted_class in _iter_square_predictions(
+            pil_image,
+            model,
+            transform,
+            class_names,
+        )
+    )
 
 
 # --- Board Extraction (CNN Version) ---
@@ -171,8 +173,10 @@ def extract_board_from_image(
     """
     Given a path or image/array, use the trained CNN model to extract piece positions.
     Returns a 2D list representing the board (8x8).
+    (Refactored to use _iter_square_predictions)
     """
-    # Convert input to PIL Image (RGB)
+    # Convert input to PIL Image (RGB) - Moved conversion logic here
+    pil_image: Image.Image
     if isinstance(image_or_path, str):
         pil_image = Image.open(image_or_path).convert("RGB")
     elif isinstance(image_or_path, np.ndarray):
@@ -181,63 +185,41 @@ def extract_board_from_image(
             pil_image = Image.fromarray(cv2.cvtColor(image_or_path, cv2.COLOR_BGR2RGB))
         elif image_or_path.shape[2] == 4:
             pil_image = Image.fromarray(cv2.cvtColor(image_or_path, cv2.COLOR_BGRA2RGB))
-        else:  # Grayscale?
+        else:  # Grayscale? Handle appropriately or raise error
             pil_image = Image.fromarray(image_or_path).convert("RGB")
     elif isinstance(image_or_path, Image.Image):
         pil_image = image_or_path.convert("RGB")
 
-    w, h = pil_image.size
-    square_h = h / BOARD_SIZE
-    square_w = w / BOARD_SIZE
     board = [["" for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
 
-    device = next(model.parameters()).device
+    # Map class name to FEN representation (handle 'empty')
+    piece_map = {
+        "bB": "b",
+        "bK": "k",
+        "bN": "n",
+        "bP": "p",
+        "bQ": "q",
+        "bR": "r",
+        "wB": "B",
+        "wK": "K",
+        "wN": "N",
+        "wP": "P",
+        "wQ": "Q",
+        "wR": "R",
+        "empty": "",  # Map 'empty' class to empty string for the board
+    }
 
-    for i in range(BOARD_SIZE):
-        for j in range(BOARD_SIZE):
-            y1 = round(i * square_h)
-            y2 = round((i + 1) * square_h)
-            x1 = round(j * square_w)
-            x2 = round((j + 1) * square_w)
-
-            # Crop square from PIL image
-            square_img_pil = pil_image.crop((x1, y1, x2, y2))
-
-            # Apply transformations
-            input_tensor = transform(square_img_pil)
-            assert isinstance(input_tensor, torch.Tensor)  # Ensure it's a tensor
-            # Add batch dimension (model expects batches)
-            input_batch = input_tensor.unsqueeze(0).to(device)
-
-            # Make prediction
-            with torch.no_grad():
-                output = model(input_batch)
-                _, predicted_idx = torch.max(output, 1)
-
-            # Map prediction index to class name
-            predicted_class_index = int(predicted_idx.item())  # Cast to int
-            predicted_class = class_names[predicted_class_index]
-
-            # Map class name to FEN representation (handle 'empty')
-            piece_map = {
-                "bB": "b",
-                "bK": "k",
-                "bN": "n",
-                "bP": "p",
-                "bQ": "q",
-                "bR": "r",
-                "wB": "B",
-                "wK": "K",
-                "wN": "N",
-                "wP": "P",
-                "wQ": "Q",
-                "wR": "R",
-                "empty": "",  # Map 'empty' class to empty string for the board
-            }
-            board[i][j] = piece_map.get(
-                predicted_class,
-                "",
-            )  # Default to empty if class not in map
+    # Use the generator to get predictions and fill the board
+    for i, j, predicted_class in _iter_square_predictions(
+        pil_image,
+        model,
+        transform,
+        class_names,
+    ):
+        board[i][j] = piece_map.get(
+            predicted_class,
+            "",
+        )  # Default to empty if class not in map
 
     return board
 

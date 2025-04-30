@@ -18,7 +18,7 @@ class ChessEngine:
         try:
             # Replace "path/to/stockfish" with the actual path to the Stockfish binary
             self.engine = chess.engine.SimpleEngine.popen_uci(
-                r"stockfish-windows-x86-64-avx2.exe",
+                r"bin/stockfish-windows-x86-64-avx2.exe",
             )
             logger.info("Chess engine initialized successfully.")
         except Exception:
