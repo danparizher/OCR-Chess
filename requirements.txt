@@ -10,10 +10,6 @@ chess==1.11.2
     # via python-chess
 click==8.1.8
     # via pip-tools
-colorama==0.4.6
-    # via
-    #   build
-    #   click
 filelock==3.18.0
     # via torch
 fsspec==2025.3.2
@@ -33,6 +29,43 @@ numpy==2.2.5
     #   -r requirements.in
     #   opencv-python
     #   torchvision
+nvidia-cublas-cu12==12.6.4.1
+    # via
+    #   nvidia-cudnn-cu12
+    #   nvidia-cusolver-cu12
+    #   torch
+nvidia-cuda-cupti-cu12==12.6.80
+    # via torch
+nvidia-cuda-nvrtc-cu12==12.6.77
+    # via torch
+nvidia-cuda-runtime-cu12==12.6.77
+    # via torch
+nvidia-cudnn-cu12==9.5.1.17
+    # via torch
+nvidia-cufft-cu12==11.3.0.4
+    # via torch
+nvidia-cufile-cu12==1.11.1.6
+    # via torch
+nvidia-curand-cu12==10.3.7.77
+    # via torch
+nvidia-cusolver-cu12==11.7.1.2
+    # via torch
+nvidia-cusparse-cu12==12.5.4.2
+    # via
+    #   nvidia-cusolver-cu12
+    #   torch
+nvidia-cusparselt-cu12==0.6.3
+    # via torch
+nvidia-nccl-cu12==2.26.2
+    # via torch
+nvidia-nvjitlink-cu12==12.6.85
+    # via
+    #   nvidia-cufft-cu12
+    #   nvidia-cusolver-cu12
+    #   nvidia-cusparse-cu12
+    #   torch
+nvidia-nvtx-cu12==12.6.77
+    # via torch
 opencv-python==4.11.0.86
     # via -r requirements.in
 packaging==25.0
@@ -72,6 +105,10 @@ pytesseract==0.3.13
     # via -r requirements.in
 python-chess==1.999
     # via -r requirements.in
+python3-xlib==0.15
+    # via
+    #   mouseinfo
+    #   pyautogui
 pytweening==1.2.0
     # via pyautogui
 stockfish==3.28.0
@@ -84,6 +121,8 @@ torch==2.7.0
     #   torchvision
 torchvision==0.22.0
     # via -r requirements.in
+triton==3.3.0
+    # via torch
 typing-extensions==4.13.2
     # via torch
 wheel==0.45.1
