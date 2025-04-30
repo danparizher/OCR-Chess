@@ -7,7 +7,6 @@ import traceback
 from typing import TYPE_CHECKING
 
 import chess.engine
-
 import xxhash
 from PIL import Image
 from PyQt6 import QtCore
