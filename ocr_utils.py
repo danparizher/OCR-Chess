@@ -242,6 +242,11 @@ def extract_board_from_image(
     return board
 
 
+def _pretty_print_board(board: list[list[str]]) -> str:
+    """Formats the board list of lists into a readable string."""
+    return "\n".join(" ".join(piece or "." for piece in row) for row in board)
+
+
 def board_to_fen(board: list[list[str]], turn: str = "w") -> str:
     """
     Convert 2D board array (from extract_board_from_image) to FEN string.
@@ -255,7 +260,8 @@ def board_to_fen(board: list[list[str]], turn: str = "w") -> str:
     white_king_count = flat_board.count("K")
     black_king_count = flat_board.count("k")
     if white_king_count != 1 or black_king_count != 1:
-        msg = f"Invalid board: found {white_king_count} white kings and {black_king_count} black kings. Board: {board}"
+        pretty_board = _pretty_print_board(board)
+        msg = f"Invalid board: found {white_king_count} white kings and {black_king_count} black kings.\nBoard:\n{pretty_board}"
         raise ValueError(msg)
     # --- End king count validation ---
     fen_rows = []
