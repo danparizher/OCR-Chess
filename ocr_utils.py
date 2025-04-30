@@ -44,11 +44,13 @@ def load_cnn_model(
 
     # Define the same transforms used during validation
     # IMPORTANT: Ensure these match the validation transforms in train_cnn.py
-    data_transform = transforms.Compose([
-        transforms.Resize((input_size, input_size)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-    ])
+    data_transform = transforms.Compose(
+        [
+            transforms.Resize((input_size, input_size)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ],
+    )
 
     # We need the class names in the order they were used during training
     # Typically derived from folder names by ImageFolder
@@ -78,6 +80,85 @@ def load_cnn_model(
     return model, data_transform, class_names
 
 
+# --- CNN Piece Counting Helper ---
+
+
+def count_pieces_in_region(
+    image: Image.Image,
+    model: torch.nn.Module,
+    transform: transforms.Compose,
+    class_names: list[str],
+) -> int:
+    """
+    Counts the number of non-empty squares in a given image region using the CNN model.
+
+    Args:
+        image: PIL Image of the region to analyze (assumed to be roughly square).
+        model: The loaded CNN model.
+        transform: The torchvision transforms to apply.
+        class_names: List of class names the model predicts.
+
+    Returns:
+        int: The number of squares classified as not 'empty'.
+    """
+    if not isinstance(image, Image.Image):
+        print("Warning: count_pieces_in_region expects a PIL Image.")
+        return 0
+
+    pil_image = image.convert("RGB")
+    w, h = pil_image.size
+    if w == 0 or h == 0:
+        return 0  # Avoid division by zero for empty images
+
+    square_h = h / BOARD_SIZE
+    square_w = w / BOARD_SIZE
+    piece_count = 0
+
+    device = next(model.parameters()).device
+
+    for i in range(BOARD_SIZE):
+        for j in range(BOARD_SIZE):
+            y1 = round(i * square_h)
+            y2 = round((i + 1) * square_h)
+            x1 = round(j * square_w)
+            x2 = round((j + 1) * square_w)
+
+            # Ensure coordinates are within image bounds
+            x1, y1 = max(0, x1), max(0, y1)
+            x2, y2 = min(w, x2), min(h, y2)
+
+            if x1 >= x2 or y1 >= y2:  # Skip if the square has zero area
+                continue
+
+            # Crop square from PIL image
+            square_img_pil = pil_image.crop((x1, y1, x2, y2))
+
+            # Apply transformations
+            try:
+                input_tensor = transform(square_img_pil)
+                assert isinstance(input_tensor, torch.Tensor)
+                input_batch = input_tensor.unsqueeze(0).to(device)
+
+                # Make prediction
+                with torch.no_grad():
+                    output = model(input_batch)
+                    _, predicted_idx = torch.max(output, 1)
+
+                predicted_class_index = int(predicted_idx.item())
+                predicted_class = class_names[predicted_class_index]
+
+                # Increment count if the square is not classified as 'empty'
+                if predicted_class != "empty":
+                    piece_count += 1
+            except Exception as e:
+                print(
+                    f"Error processing square ({i},{j}) in count_pieces_in_region: {e}",
+                )
+                # Continue to the next square even if one fails
+
+    return piece_count
+
+
 # --- Board Extraction (CNN Version) ---
 
 
@@ -90,8 +171,6 @@ def extract_board_from_image(
     """
     Given a path or image/array, use the trained CNN model to extract piece positions.
     Returns a 2D list representing the board (8x8).
-    Raises:
-        TypeError: If input type is unsupported.
     """
     # Convert input to PIL Image (RGB)
     if isinstance(image_or_path, str):
@@ -106,9 +185,6 @@ def extract_board_from_image(
             pil_image = Image.fromarray(image_or_path).convert("RGB")
     elif isinstance(image_or_path, Image.Image):
         pil_image = image_or_path.convert("RGB")
-    else:
-        msg = "Unsupported input type for image_or_path"
-        raise TypeError(msg)
 
     w, h = pil_image.size
     square_h = h / BOARD_SIZE

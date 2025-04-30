@@ -84,7 +84,24 @@ def ocr_and_engine_task(
 
 
 def main() -> None:
-    region = find_chessboard_region(debug=True)
+    # Load CNN Model once
+    print("Loading CNN model...")
+    model, transform, class_names = load_cnn_model()
+    if model is None or transform is None or class_names is None:
+        print("Failed to load CNN model. Exiting.")
+        return
+
+    # --- Find Chessboard Region (using CNN verification) ---
+    print("Finding chessboard region...")
+    region = find_chessboard_region(
+        model=model,
+        transform=transform,
+        class_names=class_names,
+    )
+    # Handle case where board is not found
+    if region is None:
+        print("Chessboard region not found. Exiting.")
+        return
     print("Detected chessboard region:", region)
     left, top, right, bottom = region
     width = right - left
@@ -96,13 +113,6 @@ def main() -> None:
     engine = ChessEngine()
     last_fen = None
     last_img_hash = None  # Store hash of last board image
-
-    # Load CNN Model once
-    print("Loading CNN model...")
-    model, transform, class_names = load_cnn_model()
-    if model is None or transform is None or class_names is None:
-        print("Failed to load CNN model. Exiting.")
-        return
 
     # Use ProcessPoolExecutor for CPU-bound OCR/engine work
     # NOTE: Passing model directly might be inefficient if it's large.
