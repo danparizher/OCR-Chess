@@ -145,11 +145,11 @@ def main() -> None:
 
                     if fen is not None and fen != last_fen:
                         print("FEN changed:", fen)
+                        last_fen = fen
                         try:
                             best_move = engine.get_best_move(fen)
                             print("Best move (engine standard):", best_move)
                             if best_move:
-                                # Flip move for display ONLY if original capture was Black-at-bottom
                                 needs_flip_for_display = not is_white_at_bottom_capture
                                 move_to_show = (
                                     flip_move(best_move)
@@ -157,7 +157,6 @@ def main() -> None:
                                     else best_move
                                 )
                                 overlay.update_move(str(move_to_show))
-                                last_fen = fen
                         except chess.engine.EngineTerminatedError:
                             print("Invalid FEN detected, restarting")
                             with contextlib.suppress(Exception):

@@ -93,8 +93,3 @@ def show_overlay(
         msg = "QApplication instance could not be created."
         raise TypeError(msg)
     return app, overlay
-
-
-# Example usage (uncomment to test standalone):
-# if __name__ == "__main__":
-#     show_overlay((100, 100, 400, 400), "e2e4")

@@ -6,26 +6,38 @@ import logging
 import chess
 import chess.engine
 
+from src import config
+
 logger = logging.getLogger(__name__)
 
 
 class ChessEngine:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        threads: int | None = None,
+        hash_mb: int | None = None,
+    ) -> None:
         """
         Initialize the engine using Stockfish.
-        Provide the path to the Stockfish executable.
+
+        Args:
+            threads: Number of engine threads to use. Defaults to config.ENGINE_THREADS.
+            hash_mb: Hash memory in MB. Defaults to config.ENGINE_HASH_MB.
         """
+        engine_threads = threads if threads is not None else config.ENGINE_THREADS
+        engine_hash_mb = hash_mb if hash_mb is not None else config.ENGINE_HASH_MB
+
         try:
-            # Replace "path/to/stockfish" with the actual path to the Stockfish binary
             self.engine = chess.engine.SimpleEngine.popen_uci(
                 r"bin/stockfish-windows-x86-64-avx2.exe",
             )
-            logger.info("Chess engine initialized successfully.")
+            # Configure engine options
+            self.engine.configure({"Threads": engine_threads, "Hash": engine_hash_mb})
         except Exception:
             logger.exception("Failed to initialize chess engine")
             raise
 
-    def get_best_move(self, fen: str, time_limit: float = 0.5) -> str | None:
+    def get_best_move(self, fen: str, time_limit: float = 0) -> str | None:
         """
         Given a FEN string, return the best move in UCI format.
 
