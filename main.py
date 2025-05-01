@@ -147,6 +147,44 @@ def main() -> None:
                         print("FEN changed:", fen)
                         last_fen = fen
                         try:
+                            # Get evaluation first
+                            eval_info = engine.get_evaluation(fen)
+                            if eval_info and "score" in eval_info:
+                                pov_score: chess.engine.PovScore = eval_info["score"]
+
+                                # Determine whose turn it is from the FEN
+                                turn = fen.split()[1]  # 'w' or 'b'
+                                score: chess.engine.Score | None = None
+
+                                score = (
+                                    pov_score.white()
+                                    if turn == "w"
+                                    else pov_score.black()
+                                )
+                                # Convert PovScore to a readable format
+                                if score.is_mate():
+                                    mate_moves = score.mate()
+                                    if mate_moves is not None:
+                                        # Display mate relative to White (+M5 = White mates, -M3 = Black mates)
+                                        final_mate = (
+                                            mate_moves if turn == "w" else -mate_moves
+                                        )
+                                        print(f"Evaluation: Mate in {final_mate}")
+                                    else:
+                                        print("Evaluation: Mate (Unknown moves)")
+                                else:
+                                    # Get centipawn score relative to the current player
+                                    cp = score.score(mate_score=10000)
+                                    if cp is not None:
+                                        if turn == "b":
+                                            cp = -cp
+                                        pawn_score = cp / 100.0
+                                        print(f"Evaluation: {pawn_score:+.2f}")
+                                    else:
+                                        print("Evaluation: N/A (score is None)")
+                            else:
+                                print("Evaluation: N/A (no score info)")
+
                             best_move = engine.get_best_move(fen)
                             print("Best move (engine standard):", best_move)
                             if best_move:

@@ -57,6 +57,28 @@ class ChessEngine:
             logger.exception("Error getting best move")
             raise
 
+    def get_evaluation(
+        self,
+        fen: str,
+        time_limit: float = 0.0,
+    ) -> chess.engine.InfoDict | None:
+        """
+        Get the evaluation score for the current board position.
+
+        Returns:
+            A dictionary containing evaluation info, or None if an error occurs.
+            See chess.engine.InfoDict for details.
+        """
+        try:
+            board = chess.Board(fen)
+            return self.engine.analyse(board, chess.engine.Limit(time=time_limit))
+        except chess.engine.EngineTerminatedError:
+            logger.error("Engine terminated unexpectedly during evaluation")  # noqa: TRY400
+            raise
+        except Exception:
+            logger.exception("Error getting board evaluation")
+            return None
+
     def close(self) -> None:
         with contextlib.suppress(Exception):
             self.engine.quit()

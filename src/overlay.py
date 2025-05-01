@@ -61,7 +61,11 @@ class ChessOverlay(QtWidgets.QWidget):
         painter.setPen(pen)
         painter.drawRect(0, 0, self.width() - 1, self.height() - 1)
         # Draw move highlights as borders only if move_str is valid
-        if self.move_str and isinstance(self.move_str, str) and len(self.move_str) == 4:
+        if (
+            self.move_str
+            and isinstance(self.move_str, str)
+            and len(self.move_str) in {4, 5}
+        ):
             from_idx, to_idx = self.move_to_indices(self.move_str)
             for idx, color in zip(
                 [from_idx, to_idx],
