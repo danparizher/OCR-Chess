@@ -290,123 +290,52 @@ def detect_player_color_and_orientation(board: list[list[str]]) -> tuple[str, bo
         - is_white_at_bottom: True if the board array likely represents
                               White pieces at the bottom (rows 4-7).
                               False if Black pieces are likely at the bottom.
+
+    Raises:
+        ValueError: If kings are missing from the board.
     """
     white_king_pos = None
     black_king_pos = None
     for r, row in enumerate(board):
         for c, piece in enumerate(row):
             if piece == "K":
+                if white_king_pos is not None:
+                    msg = "Multiple white kings found on the board."
+                    raise ValueError(msg)
                 white_king_pos = (r, c)
             elif piece == "k":
+                if black_king_pos is not None:
+                    msg = "Multiple black kings found on the board."
+                    raise ValueError(msg)
                 black_king_pos = (r, c)
 
     if white_king_pos is None or black_king_pos is None:
-        # If kings are missing, cannot determine orientation or turn reliably
-        print(
-            "Warning: Could not find both kings. Defaulting to White's turn, White-at-bottom.",
-        )
-        return "w", True
+        king_status = f"white_king={'found' if white_king_pos else 'missing'}, black_king={'found' if black_king_pos else 'missing'}"
+        pretty_board = _pretty_print_board(board)
+        msg = f"Could not find both kings ({king_status}).\nBoard:\n{pretty_board}"
+        raise ValueError(msg)
 
     w_row, _ = white_king_pos
     b_row, _ = black_king_pos
 
     # --- Determine Orientation --- based on relative king positions
-    is_white_at_bottom = True  # Default assumption
-    if w_row >= 4 and b_row < 4:
+    if w_row >= BOARD_SIZE / 2 and b_row < BOARD_SIZE / 2:
         is_white_at_bottom = True
-    elif b_row >= 4 and w_row < 4:
+    elif b_row >= BOARD_SIZE / 2 and w_row < BOARD_SIZE / 2:
+        is_white_at_bottom = False
+    elif w_row > b_row:
+        is_white_at_bottom = True
+    elif b_row > w_row:
         is_white_at_bottom = False
     else:
-        # Use piece count heuristic when king positions are ambiguous
-        is_white_at_bottom = _guess_orientation_by_piece_count(
-            board,
-            white_king_pos,
-            black_king_pos,
+        print(
+            f"Warning: Kings are on the same rank ({w_row}). Cannot reliably determine orientation. "
+            f"Defaulting orientation to White-at-bottom.",
         )
-    # --- Determine Turn --- based on orientation and back-rank check
-    turn = "w"  # Default turn
-    log_msg = ""
-    if is_white_at_bottom:
-        # White at bottom: W expected on row 7 (rank 1), B on row 0 (rank 8)
-        w_on_back = w_row == 7
-        b_on_back = b_row == 0
-        turn = (
-            "w"
-            if (
-                (w_on_back and not b_on_back)
-                or ((not b_on_back or w_on_back) and b_on_back)
-                or not b_on_back
-            )
-            else "b"
-        )
-    else:
-        # Black at bottom: B expected on row 7 (rank 8), W on row 0 (rank 1)
-        b_on_back = b_row == 7
-        w_on_back = w_row == 0
-        if (
-            (b_on_back and not w_on_back)
-            or ((not w_on_back or b_on_back) and w_on_back)
-            or not w_on_back
-        ):
-            turn = "b"
-        else:
-            turn = "w"
-    print(log_msg)
+        is_white_at_bottom = True  # Default assumption
+
+    turn = "w" if is_white_at_bottom else "b"
     return turn, is_white_at_bottom
-
-
-def _guess_orientation_by_piece_count(
-    board: list[list[str]],
-    white_king_pos: tuple[int, int],
-    black_king_pos: tuple[int, int],
-) -> bool:
-    """
-    Guess board orientation based on piece counts when king positions are ambiguous.
-
-    Returns:
-        bool: True if White is likely at the bottom, False otherwise.
-    """
-    # Ambiguous: Kings on same side, or one/both exactly on midline.
-    # Using piece count heuristic as tie-breaker.
-    white_top_count = 0
-    black_top_count = 0
-    white_bottom_count = 0
-    black_bottom_count = 0
-
-    for r, row_pieces in enumerate(board):
-        for piece in row_pieces:
-            if r < 4:  # Top half
-                if piece.isupper():
-                    white_top_count += 1
-                elif piece.islower():
-                    black_top_count += 1
-            elif piece.isupper():
-                white_bottom_count += 1
-            elif piece.islower():
-                black_bottom_count += 1
-
-    if white_bottom_count > black_bottom_count:
-        result = True
-        print(
-            f"Info: Ambiguous kings (W: {white_king_pos}, B: {black_king_pos}). "
-            f"Orientation guess (White at bottom) based on piece count "
-            f"(Bottom: W={white_bottom_count}, B={black_bottom_count}; Top: W={white_top_count}, B={black_top_count}).",
-        )
-    elif black_bottom_count > white_bottom_count:
-        result = False
-        print(
-            f"Info: Ambiguous kings (W: {white_king_pos}, B: {black_king_pos}). "
-            f"Orientation guess (Black at bottom) based on piece count "
-            f"(Bottom: W={white_bottom_count}, B={black_bottom_count}; Top: W={white_top_count}, B={black_top_count}).",
-        )
-    else:  # Counts are equal, stick to default
-        result = True
-        print(
-            f"Warning: Ambiguous king positions (W: {white_king_pos}, B: {black_king_pos}) "
-            f"and piece counts are equal (Bottom: W={white_bottom_count}, B={black_bottom_count}; Top: W={white_top_count}, B={black_top_count}). Defaulting to White-at-bottom.",
-        )
-
-    return result
 
 
 def flip_board(board: list[list[str]]) -> list[list[str]]:
