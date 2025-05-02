@@ -49,14 +49,23 @@ By using this software, you agree to employ it responsibly and ethically, strict
     source .venv/bin/activate
     ```
 
-3. **Install dependencies using pip-tools**:
+3. **Install dependencies using Poetry**:
 
     ```bash
-    pip install pip-tools
-    pip-sync
+    # Install poetry if you don't have it (https://python-poetry.org/docs/#installation)
+    # Then, install project dependencies
+    poetry install
     ```
 
-4. **Download piece templates** (if not present):
+4. **Activate the environment**:
+
+    ```bash
+    poetry shell
+    ```
+
+    Alternatively, run commands directly using `poetry run <command>`.
+
+5. **Download piece templates** (if not present):
 
     ```bash
     python download.py
@@ -76,6 +85,12 @@ If you want to train the CNN model on your own data:
     This will create/update the `chess_piece_cnn.pth` model file.
 
 ## Usage
+
+Activate the environment (if not already done):
+
+```bash
+poetry shell
+```
 
 Run the main application:
 

@@ -162,7 +162,7 @@ def main() -> None:
                                     else pov_score.black()
                                 )
                                 # Convert PovScore to a readable format
-                                if score.is_mate():
+                                if score is not None and score.is_mate():
                                     mate_moves = score.mate()
                                     if mate_moves is not None:
                                         # Display mate relative to White (+M5 = White mates, -M3 = Black mates)
@@ -172,16 +172,16 @@ def main() -> None:
                                         print(f"Evaluation: Mate in {final_mate}")
                                     else:
                                         print("Evaluation: Mate (Unknown moves)")
-                                else:
-                                    # Get centipawn score relative to the current player
+                                # Get centipawn score relative to the current player
+                                elif score is not None:
                                     cp = score.score(mate_score=10000)
                                     if cp is not None:
                                         if turn == "b":
                                             cp = -cp
                                         pawn_score = cp / 100.0
-                                        print(f"Evaluation: {pawn_score:+.2f}")
-                                    else:
-                                        print("Evaluation: N/A (score is None)")
+                                    print(f"Evaluation: {pawn_score:+.2f}")
+                                else:
+                                    print("Evaluation: N/A (score is None)")
                             else:
                                 print("Evaluation: N/A (no score info)")
 

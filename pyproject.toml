@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "ocr-chess"
+version = "0.1.0"
+description = "Computer Vision Chess Assistant"
+authors = ["Dan Parizher <dparizher@gmail.com>"]
+readme = "README.md"
+license = "MIT"
+packages = [{ include = "src" }]
+
+[tool.poetry.dependencies]
+numpy = "*"
+opencv-python = "*"
+pillow = "*"
+pyqt6 = "*"
+python = "^3.13"
+python-chess = "*"
+torch = { version = "*", source = "pytorch_cpu" }
+torchvision = { version = "*", source = "pytorch_cpu" }
+xxhash = "*"
+
+[[tool.poetry.source]]
+name = "pytorch_cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
+
+
+[tool.poetry.group.dev.dependencies]
+deptry = "^0.23.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.deptry]
+package_module_name_map = { python-chess = ["chess"] }
