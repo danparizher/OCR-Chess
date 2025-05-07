@@ -180,8 +180,6 @@ def main() -> None:
                                             cp = -cp
                                         pawn_score = cp / 100.0
                                     print(f"Evaluation: {pawn_score:+.2f}")
-                                else:
-                                    print("Evaluation: N/A (score is None)")
                             else:
                                 print("Evaluation: N/A (no score info)")
 
