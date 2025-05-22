@@ -539,19 +539,18 @@ chess = ">=1,<2"
 
 [[package]]
 name = "requirements-parser"
-version = "0.11.0"
+version = "0.13.0"
 description = "This is a small Python module for parsing Pip requirement files."
 optional = false
 python-versions = "<4.0,>=3.8"
 groups = ["dev"]
 files = [
-    {file = "requirements_parser-0.11.0-py3-none-any.whl", hash = "sha256:50379eb50311834386c2568263ae5225d7b9d0867fb55cf4ecc93959de2c2684"},
-    {file = "requirements_parser-0.11.0.tar.gz", hash = "sha256:35f36dc969d14830bf459803da84f314dc3d17c802592e9e970f63d0359e5920"},
+    {file = "requirements_parser-0.13.0-py3-none-any.whl", hash = "sha256:2b3173faecf19ec5501971b7222d38f04cb45bb9d87d0ad629ca71e2e62ded14"},
+    {file = "requirements_parser-0.13.0.tar.gz", hash = "sha256:0843119ca2cb2331de4eb31b10d70462e39ace698fd660a915c247d2301a4418"},
 ]
 
 [package.dependencies]
 packaging = ">=23.2"
-types-setuptools = ">=69.1.0"
 
 [[package]]
 name = "setuptools"
@@ -674,18 +673,6 @@ scipy = ["scipy"]
 type = "legacy"
 url = "https://download.pytorch.org/whl/cpu"
 reference = "pytorch_cpu"
-
-[[package]]
-name = "types-setuptools"
-version = "80.7.0.20250516"
-description = "Typing stubs for setuptools"
-optional = false
-python-versions = ">=3.9"
-groups = ["dev"]
-files = [
-    {file = "types_setuptools-80.7.0.20250516-py3-none-any.whl", hash = "sha256:c1da6c11698139c8307c6df5987592df940e956912c204e42d844ba821dd2741"},
-    {file = "types_setuptools-80.7.0.20250516.tar.gz", hash = "sha256:57274b58e05434de42088a86074c9e630e5786f759cf9cc1e3015e886297ca21"},
-]
 
 [[package]]
 name = "typing-extensions"
