@@ -123,3 +123,25 @@ The application will detect the chessboard, continuously analyze the position, a
 - Enhance player perspective detection.
 - Optimize performance (CPU usage).
 - Smoother overlay rendering.
+
+## Project Architecture
+
+```mermaid
+graph TD
+    A[main.py] --> B{src};
+    B --> C[config.py];
+    B --> D[overlay.py];
+    B --> E{engine};
+    E --> F[chess_engine.py];
+    B --> G{models};
+    G --> H[cnn_definition.py];
+    B --> I{utils};
+    I --> J[ocr_utils.py];
+    I --> K[screen_utils.py];
+    B --> L{data_handling};
+    L --> M[data_generator.py];
+    A --> N{data/};
+    A --> O{models/ pre-trained};
+    A --> P{scripts/};
+    A --> Q{python-chess-pieces/};
+```
