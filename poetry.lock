@@ -609,7 +609,6 @@ files = [
     {file = "torch-2.7.0+cpu-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:a845b6f3bda3c40f736847dede95d8bfec81fb7e11458cd25973ba13542cf1f6"},
     {file = "torch-2.7.0+cpu-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:64123c05615e27368c7a7816f6e39c6d219998693beabde0b0b9cedf91b5ed8b"},
     {file = "torch-2.7.0+cpu-cp312-cp312-win_amd64.whl", hash = "sha256:69e25c973bdd7ea24b0fa9f9792114950afaeb8f819e5723819b923f50989175"},
-    {file = "torch-2.7.0+cpu-cp312-cp312-win_arm64.whl", hash = "sha256:1d7a6f33868276770a657beec7f77c7726b4da9d0739eff1b3ae64cc9a09d8e3"},
     {file = "torch-2.7.0+cpu-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:addf9107939522ffb3b60d2900fee838a77dbe098e2643e01164f46f8612f9c0"},
     {file = "torch-2.7.0+cpu-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:3b09aa2c8d30fa567a8d13270fbf9af7ee472fdfafbc7dfdc87c607bf46001f7"},
     {file = "torch-2.7.0+cpu-cp313-cp313-win_amd64.whl", hash = "sha256:99ca8f4cb53484c45bb668657069c17139c07367ea20ddef2c0ce8412f42da2f"},
@@ -677,14 +676,14 @@ reference = "pytorch_cpu"
 
 [[package]]
 name = "typing-extensions"
-version = "4.13.2"
-description = "Backported and Experimental Type Hints for Python 3.8+"
+version = "4.14.0"
+description = "Backported and Experimental Type Hints for Python 3.9+"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "typing_extensions-4.13.2-py3-none-any.whl", hash = "sha256:a439e7c04b49fec3e5d3e2beaa21755cadbbdc391694e28ccdd36ca4a1408f8c"},
-    {file = "typing_extensions-4.13.2.tar.gz", hash = "sha256:e6c81219bd689f51865d9e372991c540bda33a0379d5573cddb9a3a23f7caaef"},
+    {file = "typing_extensions-4.14.0-py3-none-any.whl", hash = "sha256:a1514509136dd0b477638fc68d6a91497af5076466ad0fa6c338e44e359944af"},
+    {file = "typing_extensions-4.14.0.tar.gz", hash = "sha256:8676b788e32f02ab42d9e7c61324048ae4c6d844a399eebace3d4979d75ceef4"},
 ]
 
 [[package]]
