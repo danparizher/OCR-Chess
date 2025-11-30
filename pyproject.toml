@@ -1,35 +1,35 @@
-[tool.poetry]
+[project]
 name = "ocr-chess"
 version = "0.1.0"
 description = "Computer Vision Chess Assistant"
-authors = ["Dan Parizher <dparizher@gmail.com>"]
+authors = [
+    { name = "Dan Parizher", email = "dparizher@gmail.com" }
+]
 readme = "README.md"
-license = "MIT"
-packages = [{ include = "src" }]
+license = { text = "MIT" }
+requires-python = ">3.13"
+dependencies = [
+    "numpy",
+    "opencv-python",
+    "pillow",
+    "pyqt6",
+    "python-chess",
+    "torch",
+    "torchvision",
+    "xxhash",
+]
 
-[tool.poetry.dependencies]
-numpy = "*"
-opencv-python = "*"
-pillow = "*"
-pyqt6 = "*"
-python = "^3.13"
-python-chess = "*"
-torch = { version = "*", source = "pytorch_cpu" }
-torchvision = { version = "*", source = "pytorch_cpu" }
-xxhash = "*"
-
-[[tool.poetry.source]]
-name = "pytorch_cpu"
-url = "https://download.pytorch.org/whl/cpu"
-priority = "explicit"
-
-
-[tool.poetry.group.dev.dependencies]
-deptry = "*"
+[project.optional-dependencies]
+dev = [
+    "deptry",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
 
 [tool.deptry]
 package_module_name_map = { python-chess = ["chess"] }

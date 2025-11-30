@@ -8,7 +8,7 @@ from PIL import Image, ImageEnhance
 # --- Configuration ---
 PIECE_DIR = Path("./python-chess-pieces")
 # We will need to capture/generate these later
-EMPTY_SQUARE_DIR = Path("./empty_squares")
+EMPTY_SQUARE_DIR = Path("./data/empty_squares")
 OUTPUT_DIR = Path("./data")
 TRAIN_DIR = OUTPUT_DIR / "train"
 VALID_DIR = OUTPUT_DIR / "validation"

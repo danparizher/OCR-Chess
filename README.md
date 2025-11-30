@@ -34,13 +34,30 @@ By using this software, you agree to employ it responsibly and ethically, strict
     cd ocr-chess
     ```
 
-2. **Create and activate a virtual environment**:
+2. **Install UV**:
 
     ```bash
-    # Create the environment
-    python -m venv .venv
+    # Windows (PowerShell)
+    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+    
+    # macOS/Linux
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    # Or using pip
+    pip install uv
+    ```
 
-    # Activate the environment
+3. **Create virtual environment and install dependencies**:
+
+    ```bash
+    # Create virtual environment and install dependencies
+    uv venv
+    uv sync
+    ```
+
+4. **Activate the environment**:
+
+    ```bash
     # Windows (cmd.exe)
     .\.venv\Scripts\activate
     # Windows (PowerShell)
@@ -49,21 +66,7 @@ By using this software, you agree to employ it responsibly and ethically, strict
     source .venv/bin/activate
     ```
 
-3. **Install dependencies using Poetry**:
-
-    ```bash
-    # Install poetry if you don't have it (https://python-poetry.org/docs/#installation)
-    # Then, install project dependencies
-    poetry install
-    ```
-
-4. **Activate the environment**:
-
-    ```bash
-    poetry shell
-    ```
-
-    Alternatively, run commands directly using `poetry run <command>`.
+    Alternatively, run commands directly using `uv run <command>`.
 
 5. **Download piece templates** (if not present):
 
@@ -162,7 +165,18 @@ This will:
 Activate the environment (if not already done):
 
 ```bash
-poetry shell
+# Windows (cmd.exe)
+.\.venv\Scripts\activate
+# Windows (PowerShell)
+.\.venv\Scripts\Activate.ps1
+# macOS/Linux (bash/zsh)
+source .venv/bin/activate
+```
+
+Or run directly with UV:
+
+```bash
+uv run python main.py
 ```
 
 Run the main application:
