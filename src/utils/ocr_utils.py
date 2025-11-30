@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import cv2
@@ -8,25 +9,25 @@ import torch
 from PIL import Image
 from torchvision import transforms
 
-from src.config import BOARD_SIZE, INPUT_SIZE
+from src.config import BOARD_SIZE, INPUT_SIZE, MODEL_PATH
 from src.models.cnn_definition import SimpleCNN
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from pathlib import Path
 
 
 # --- CNN Model Loading ---
 def load_cnn_model(
-    model_path: str | Path = "models/chess_piece_cnn.pth",
+    model_path: str | Path | None = None,
     num_classes: int = 13,
     input_size: int = INPUT_SIZE,
 ) -> tuple[torch.nn.Module | None, transforms.Compose | None, list[str] | None]:
     """Loads the trained CNN model and defines the necessary transforms."""
+    model_path = MODEL_PATH if model_path is None else Path(model_path)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = SimpleCNN(num_classes=num_classes)
     try:
-        model.load_state_dict(torch.load(model_path, map_location=device))
+        model.load_state_dict(torch.load(str(model_path), map_location=device))
         print(f"Loaded trained model from {model_path}")
     except FileNotFoundError:
         print(f"Error: Model file not found at {model_path}. Train the model first.")
@@ -165,7 +166,7 @@ def count_pieces_in_region(
 
 
 def extract_board_from_image(
-    image_or_path: str | Image.Image | np.ndarray,
+    image_or_path: str | Path | Image.Image | np.ndarray,
     model: torch.nn.Module,
     transform: transforms.Compose,
     class_names: list[str],
@@ -177,8 +178,8 @@ def extract_board_from_image(
     """
     # Convert input to PIL Image (RGB) - Moved conversion logic here
     pil_image: Image.Image
-    if isinstance(image_or_path, str):
-        pil_image = Image.open(image_or_path).convert("RGB")
+    if isinstance(image_or_path, (str, Path)):
+        pil_image = Image.open(str(image_or_path)).convert("RGB")
     elif isinstance(image_or_path, np.ndarray):
         # Assuming BGR from OpenCV capture, convert to RGB
         if image_or_path.shape[2] == 3:

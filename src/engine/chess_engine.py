@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import platform
+from pathlib import Path
 
 import chess
 import chess.engine
@@ -11,11 +13,43 @@ from src import config
 logger = logging.getLogger(__name__)
 
 
+def _get_stockfish_path() -> Path:
+    """Get the Stockfish binary path based on the current platform."""
+    system = platform.system().lower()
+    machine = platform.machine().lower()
+
+    if system == "darwin":
+        return (
+            config.BIN_DIR / "stockfish-macos-arm64"
+            if "arm64" in machine or "aarch64" in machine
+            else config.BIN_DIR / "stockfish-macos-x86-64"
+        )
+    elif system == "linux":
+        return (
+            config.BIN_DIR / "stockfish-linux-arm64"
+            if "arm64" in machine or "aarch64" in machine
+            else config.BIN_DIR / "stockfish-linux-x86-64"
+        )
+    elif system == "windows":
+        if "x86_64" in machine or "amd64" in machine:
+            return config.BIN_DIR / "stockfish-windows-x86-64-avx2.exe"
+        elif "x86" in machine or "i386" in machine or "i686" in machine:
+            return config.BIN_DIR / "stockfish-windows-x86-32.exe"
+        else:
+            # Fallback for Windows
+            return config.BIN_DIR / "stockfish-windows-x86-64-avx2.exe"
+    else:
+        # Fallback: try to find any stockfish executable
+        stockfish_exe = "stockfish.exe" if system == "windows" else "stockfish"
+        return config.BIN_DIR / stockfish_exe
+
+
 class ChessEngine:
     def __init__(
         self,
         threads: int | None = None,
         hash_mb: int | None = None,
+        engine_path: str | Path | None = None,
     ) -> None:
         """
         Initialize the engine using Stockfish.
@@ -23,14 +57,25 @@ class ChessEngine:
         Args:
             threads: Number of engine threads to use. Defaults to config.ENGINE_THREADS.
             hash_mb: Hash memory in MB. Defaults to config.ENGINE_HASH_MB.
+            engine_path: Path to Stockfish binary. If None, auto-detects based on platform.
         """
         engine_threads = threads if threads is not None else config.ENGINE_THREADS
         engine_hash_mb = hash_mb if hash_mb is not None else config.ENGINE_HASH_MB
 
-        try:
-            self.engine = chess.engine.SimpleEngine.popen_uci(
-                r"bin/stockfish-windows-x86-64-avx2.exe",
+        if engine_path is None:
+            engine_path = _get_stockfish_path()
+        else:
+            engine_path = Path(engine_path)
+
+        if not engine_path.exists():
+            msg = (
+                f"Stockfish binary not found at {engine_path}. Please ensure it exists."
             )
+            logger.error(msg)
+            raise FileNotFoundError(msg)
+
+        try:
+            self.engine = chess.engine.SimpleEngine.popen_uci(str(engine_path))
             # Configure engine options
             self.engine.configure({"Threads": engine_threads, "Hash": engine_hash_mb})
         except Exception:

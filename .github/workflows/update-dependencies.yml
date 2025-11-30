@@ -1,4 +1,4 @@
-name: Update Poetry Dependencies
+name: Update UV Dependencies
 
 on:
   schedule:
@@ -25,37 +25,36 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install UV
+        uses: astral-sh/setup-uv@v4
         with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
+          version: "latest"
 
       - name: Load cached venv
-        id: cached-poetry-dependencies
+        id: cached-uv-dependencies
         uses: actions/cache@v4
         with:
           path: .venv
-          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/uv.lock') }}
 
       - name: Install dependencies (if cache doesn't exist)
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
+        if: steps.cached-uv-dependencies.outputs.cache-hit != 'true'
+        run: uv sync --no-dev
 
       - name: Update dependencies
-        run: poetry update --no-interaction
+        run: uv lock --upgrade
 
       - name: Commit and push if lock file changed
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          # Check if poetry.lock was modified
-          if git diff --quiet poetry.lock; then
+          # Check if uv.lock was modified
+          if git diff --quiet uv.lock; then
             echo "No dependency changes."
             exit 0
           fi
-          git add poetry.lock
-          git commit -m "Update dependencies via Poetry"
+          git add uv.lock
+          git commit -m "Update dependencies via UV"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -13,11 +13,12 @@ from torch import nn, optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
+from src.config import MODEL_PATH, PROJECT_ROOT
 from src.models.cnn_definition import SimpleCNN
 
 # --- Configuration ---
-DATA_DIR = Path("./data")
-MODEL_SAVE_PATH = Path("./models/chess_piece_cnn.pth")
+DATA_DIR = PROJECT_ROOT / "data"
+MODEL_SAVE_PATH = MODEL_PATH
 NUM_CLASSES = 13  # 12 pieces + 1 empty
 BATCH_SIZE = 32  # Increase to 64 or 128 if using GPU for faster training
 NUM_EPOCHS = 15

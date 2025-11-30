@@ -22,6 +22,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "deptry",
+    "ruff",
+    "uv",
 ]
 
 [build-system]
