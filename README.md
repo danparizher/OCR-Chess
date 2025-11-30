@@ -73,16 +73,89 @@ By using this software, you agree to employ it responsibly and ethically, strict
 
 ## Training the Piece Recognition Model (Optional)
 
-If you want to train the CNN model on your own data:
+If you want to train the CNN model on your own data, you have two options:
 
-1. **Generate Square Images**: Use `data_generator.py` to extract individual square images from your chess screenshots or datasets. Place them in the `data/train` and `data/validation` directories, categorized by piece type (e.g., `wP`, `bK`, `empty`). See the `data/` directory structure for examples.
-2. **Train the CNN**: Run the training script:
+### Option 1: Automatic Data Generation (Recommended)
+
+The easiest way to generate training data is using the provided data generator:
+
+1. **Capture Empty Square Backgrounds**: First, capture empty square images from your chessboard:
 
     ```bash
-    python train_cnn.py
+    python scripts/capture_empty_squares.py
     ```
 
-    This will create/update the `chess_piece_cnn.pth` model file.
+    This will save empty square images to `data/empty_squares/`. Make sure your chessboard is visible on screen and mostly empty when running this script.
+
+2. **Generate Synthetic Training Data**: Use the data generator to create synthetic training images:
+
+    ```bash
+    python src/data_handling/data_generator.py
+    ```
+
+    This script will automatically:
+    - Create the required folder structure
+    - Generate synthetic images by overlaying piece templates onto empty square backgrounds
+    - Split data into training and validation sets
+    - Apply data augmentation (brightness, contrast, scaling variations)
+
+### Option 2: Manual Data Organization
+
+If you prefer to organize your own training images manually, you need to create the following folder structure:
+
+```txt
+data/
+├── train/
+│   ├── wP/          # White pawn images
+│   ├── wN/          # White knight images
+│   ├── wB/          # White bishop images
+│   ├── wR/          # White rook images
+│   ├── wQ/          # White queen images
+│   ├── wK/          # White king images
+│   ├── bP/          # Black pawn images
+│   ├── bN/          # Black knight images
+│   ├── bB/          # Black bishop images
+│   ├── bR/          # Black rook images
+│   ├── bQ/          # Black queen images
+│   ├── bK/          # Black king images
+│   └── empty/       # Empty square images
+└── validation/
+    ├── wP/          # White pawn images
+    ├── wN/          # White knight images
+    ├── wB/          # White bishop images
+    ├── wR/          # White rook images
+    ├── wQ/          # White queen images
+    ├── wK/          # White king images
+    ├── bP/          # Black pawn images
+    ├── bN/          # Black knight images
+    ├── bB/          # Black bishop images
+    ├── bR/          # Black rook images
+    ├── bQ/          # Black queen images
+    ├── bK/          # Black king images
+    └── empty/       # Empty square images
+```
+
+**Important Notes:**
+
+- **Folder Names**: The subdirectory names must match exactly: `wP`, `wN`, `wB`, `wR`, `wQ`, `wK`, `bP`, `bN`, `bB`, `bR`, `bQ`, `bK`, and `empty` (13 classes total).
+- **Image Format**: Images can be in any format supported by PIL/Pillow (PNG, JPG, etc.).
+- **Image Size**: Images will be automatically resized to 64x64 pixels during training, but it's recommended to use square images that are close to this size.
+- **Train/Validation Split**: Place your training images in `data/train/` and validation images in `data/validation/`. A typical split is 80% training and 20% validation.
+- **Minimum Requirements**: You should have at least a few images per class in both training and validation sets for the model to train effectively.
+
+### Training the Model
+
+Once your data is organized (either automatically or manually), train the CNN:
+
+```bash
+python scripts/train_cnn.py
+```
+
+This will:
+
+- Load images from `data/train/` and `data/validation/`
+- Train the CNN model for 25 epochs (configurable in the script)
+- Save the best model to `models/chess_piece_cnn.pth` based on validation accuracy
 
 ## Usage
 
